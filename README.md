@@ -3,6 +3,8 @@
 Prometheus exporter for the **SFR NB6VAC** (and likely other NB6 variants) home router.  
 Scrapes the box local API and web interface to expose metrics in Prometheus format.
 
+![Grafana dashboard showing WAN status, uptime, temperature, voltage, switch throughput and WiFi clients](docs/dashboard.png)
+
 ## Metrics
 
 | Metric | Description |
