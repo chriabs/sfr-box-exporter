@@ -1,0 +1,23 @@
+services:
+  sfr-box-exporter:
+    image: python:3.12-alpine
+    container_name: sfr-box-exporter
+    restart: unless-stopped
+    command: >
+      sh -c "pip install prometheus-client -q && python3 /app/exporter.py"
+    volumes:
+      - /opt/docker/sfr-box-exporter:/app:ro
+    ports:
+      - "9101:9101"
+    environment:
+      - BOX_URL=http://192.168.1.1
+      - BOX_USER=admin
+      - BOX_PASS=your_box_admin_password   # printed on the label under the box
+      # - EXPORTER_PORT=9101               # optional, default 9101
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    external: true
+    name: monitoring_monitoring   # adjust to your Prometheus network name
