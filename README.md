@@ -1,5 +1,7 @@
 # SFR Box Exporter
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/chabnco)
+
 Prometheus exporter for the **SFR NB6VAC** (and likely other NB6 variants) home router.  
 Scrapes the box local API and web interface to expose metrics in Prometheus format.
 
