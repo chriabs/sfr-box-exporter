@@ -1,0 +1,9 @@
+# Snippet to add inside scrape_configs in your prometheus.yml
+
+  - job_name: 'sfr-box'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['sfr-box-exporter:9101']
+    relabel_configs:
+      - target_label: instance
+        replacement: sfr-box
