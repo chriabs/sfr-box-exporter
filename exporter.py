@@ -138,26 +138,32 @@ def collect_authenticated():
         with opener.open(f"{BOX_URL}/state/lan", timeout=10) as r:
             body = r.read().decode()
 
-        # Switch port stats
-        port_names = re.findall(r"Port\s+(LAN\s+\d+|FIBRE)", body)
-        tx_section = re.search(r"Compteur octets émis\s+(.*?)Collisions",   body, re.DOTALL)
-        rx_section = re.search(r"Compteur octets reçus\s+(.*?)Erreurs FCS", body, re.DOTALL)
-        if port_names and tx_section and rx_section:
-            tx_vals = re.findall(r"[\d.]+\s+(?:GB|MB|KB|B)", tx_section.group(1))
-            rx_vals = re.findall(r"[\d.]+\s+(?:GB|MB|KB|B)", rx_section.group(1))
-            for i, name in enumerate(port_names):
-                label = name.replace(" ", "")
-                if i < len(tx_vals):
-                    port_tx.labels(port=label).set(parse_bytes(tx_vals[i]))
-                if i < len(rx_vals):
-                    port_rx.labels(port=label).set(parse_bytes(rx_vals[i]))
+        # Switch port stats — ports listed in table header, values in matching <td> cells
+        port_names = [p.replace(" ", "") for p in re.findall(r"Port (LAN \d+|FIBRE)", body)]
+        def _row_vals(label):
+            m = re.search(re.escape(label) + r".*?</th>(.*?)</tr>", body, re.DOTALL)
+            return re.findall(r"<td>\s*(.*?)\s*</td>", m.group(1)) if m else []
+        tx_vals = _row_vals("Compteur octets émis")
+        rx_vals = _row_vals("Compteur octets reçus")
+        for i, name in enumerate(port_names):
+            if i < len(tx_vals):
+                port_tx.labels(port=name).set(parse_bytes(tx_vals[i]))
+            if i < len(rx_vals):
+                port_rx.labels(port=name).set(parse_bytes(rx_vals[i]))
 
-        # WiFi clients
-        macs    = re.findall(r"Adresse MAC\s+([\da-f:]{17})", body, re.I)
-        signals = re.findall(r"Puissance signal\s+&nbsp;\s*(-?\d+)\s*dB",  body)
+        # WiFi clients — each client is in a separate wlanhost_stats table
+        wifi_sections = re.findall(r"wlanhost_stats.*?</table>", body, re.DOTALL)
+        macs, signals = [], []
+        for sec in wifi_sections:
+            mac_m = re.search(r"Adresse MAC.*?<td>\s*([\da-fA-F:]{17})\s*</td>", sec, re.DOTALL)
+            sig_m = re.search(r'class="rssidb">\s*&nbsp;\s*(-?\d+)\s*dB', sec)
+            if mac_m:
+                macs.append(mac_m.group(1).strip().lower())
+            if sig_m:
+                signals.append(int(sig_m.group(1)))
         wifi_clients.set(len(macs))
         for mac, sig in zip(macs, signals):
-            wifi_signal.labels(mac=mac.lower()).set(int(sig))
+            wifi_signal.labels(mac=mac).set(sig)
 
     except Exception as e:
         print(f"[lan] {e}", flush=True)
